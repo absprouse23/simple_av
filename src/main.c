@@ -1,6 +1,7 @@
 #include <dirent.h>
 #include <unistd.h>
 #include <yara.h>
+#include <yara/compiler.h>
 
 int main(int argc, char** argv) {
 
@@ -44,5 +45,6 @@ int main(int argc, char** argv) {
         chdir("..");
     }
 
+    yr_compiler_destroy(compiler);
     yr_finalize();
 }
