@@ -1,3 +1,5 @@
+#pragma once
+
 #include <dirent.h>
 #include <unistd.h>
 #include <yara.h>

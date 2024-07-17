@@ -1,4 +1,5 @@
 #include "compiler.h"
+#include <yara/error.h>
 
 int main(int argc, char** argv) {
 
@@ -9,12 +10,13 @@ int main(int argc, char** argv) {
 
     YR_RULES* rules;
 
-    if (compiler_build_ruleset(&rules) == EXIT_FAILURE) {
-        yr_finalize();
-        return EXIT_FAILURE;
-    }
-
-    yr_rules_save(rules, "rules.dat");
+    if (yr_rules_load("rules.dat", &rules) == ERROR_COULD_NOT_OPEN_FILE) {
+        if (compiler_build_ruleset(&rules) == EXIT_FAILURE) {
+            yr_finalize();
+            return EXIT_FAILURE;
+        }
+        yr_rules_save(rules, "rules.dat");
+    }   
 
     yr_finalize();
 }
