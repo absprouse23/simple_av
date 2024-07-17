@@ -1,5 +1,4 @@
 #include "compiler.h"
-#include <yara/error.h>
 
 int main(int argc, char** argv) {
 
