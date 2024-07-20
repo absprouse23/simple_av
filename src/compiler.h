@@ -1,3 +1,5 @@
+// Aaron Sprouse 2024
+
 #pragma once
 
 #include <dirent.h>

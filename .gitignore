@@ -53,3 +53,5 @@ Temporary Items
 .cache
 bin
 *.dat
+compile_commands.json
+eicar.txt

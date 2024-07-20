@@ -1,4 +1,7 @@
+// Aaron Sprouse 2024
+
 #include "compiler.h"
+#include <dirent.h>
 
 int compiler_build_ruleset(YR_RULES** rules) {
 
@@ -18,7 +21,7 @@ int compiler_build_ruleset(YR_RULES** rules) {
 
     struct dirent *dir;
     while ((dir = readdir(dir_stream)) != NULL) {
-        if ((strcmp(dir->d_name, ".") == 0) || (strcmp(dir->d_name, "..") == 0)) {
+        if (dir->d_type != DT_REG) { // TODO: Move into subfolder if it exists
             continue;
         }
         printf("Compiling rule %s\n", dir->d_name);
