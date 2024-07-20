@@ -2,9 +2,9 @@
 
 # Config
 compiler = gcc
-debug_compile_flags = -Wall -O0 -g
+debug_compile_flags = -Wall -Wextra -Wfatal-errors -Werror -O0 -g
 debug_link_flags = -lyara
-release_compile_flags = -Wall -O2
+release_compile_flags = -Wall -Wextra -Wfatal-errors -Werror -O2
 release_link_flags = -lyara
 debug = true
 

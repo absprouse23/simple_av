@@ -3,16 +3,16 @@
 #include "compiler.h"
 #include <dirent.h>
 
-int compiler_build_ruleset(YR_RULES** rules) {
+int compiler_build_ruleset(YR_RULES **rules) {
 
-    YR_COMPILER* compiler;
+    YR_COMPILER *compiler;
 
     if (yr_compiler_create(&compiler) != ERROR_SUCCESS) {
         fprintf(stderr, "Failed to create YARA compiler\n");
         return EXIT_FAILURE;
     }
 
-    DIR* dir_stream = opendir("./rules/");
+    DIR *dir_stream = opendir("./rules/");
     if (dir_stream == NULL) {
         perror("Cannot open rules directory. Does it exist?");
         yr_compiler_destroy(compiler);
@@ -27,8 +27,8 @@ int compiler_build_ruleset(YR_RULES** rules) {
         printf("Compiling rule %s\n", dir->d_name);
 
         chdir("rules");
-        FILE* current_file = fopen(dir->d_name, "r");
-        int error = yr_compiler_add_file(compiler, current_file , NULL, NULL);
+        FILE *current_file = fopen(dir->d_name, "r");
+        int error = yr_compiler_add_file(compiler, current_file, NULL, NULL);
 
         if (error > 0) {
             fprintf(stderr, "Failed to compile rule %s\n", dir->d_name);
@@ -45,5 +45,4 @@ int compiler_build_ruleset(YR_RULES** rules) {
 
     yr_compiler_destroy(compiler);
     return EXIT_SUCCESS;
-
 }
