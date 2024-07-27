@@ -2,19 +2,44 @@
 
 #include "compiler.h"
 #include "scanner.h"
-#include <stdio.h>
+
+#include <errno.h>
+#include <limits.h>
 #include <stdlib.h>
+
+#define MODE_SINGLEFILE 0
+#define MODE_DIR 1
 
 int main(int argc, char **argv) {
 
-    if (argc <= 1) {
-        fprintf(stderr, "Usage: simple-av <file>\n");
-        return EXIT_FAILURE;
+    int opt;
+    int prg_mode = -1;
+    filedata_t file_data;
+    while ((opt = getopt(argc, argv, "f:p:")) != -1) {
+        switch (opt) {
+        case 'f':
+            realpath(optarg, file_data.filename);
+            prg_mode = MODE_SINGLEFILE;
+            break;
+        case 'p':
+            realpath(optarg, file_data.filename);
+            prg_mode = MODE_DIR;
+            break;
+        default:
+            fprintf(stderr,
+                    "Usage: simple_av [-f <filename> | -p <filename>]\n");
+            exit(EINVAL);
+        }
+    }
+
+    if (prg_mode == -1) {
+        fprintf(stderr, "Usage: simple_av [-f <filename> | -p <filename>]\n");
+        exit(EINVAL);
     }
 
     if (yr_initialize() != ERROR_SUCCESS) {
-        fprintf(stderr, "Failed to init yara compiler");
-        return EXIT_FAILURE;
+        fprintf(stderr, "Failed to init yara compiler\n");
+        exit(EXIT_FAILURE);
     }
 
     YR_RULES *rules;
@@ -27,24 +52,23 @@ int main(int argc, char **argv) {
         yr_rules_save(rules, "rules.dat");
     }
 
-    filedata_t user_file;
-    realpath(argv[1], user_file.filename);
+    if (prg_mode == MODE_SINGLEFILE) {
+        int scan_status = yr_rules_scan_file(
+            rules, file_data.filename,
+            SCAN_FLAGS_FAST_MODE | SCAN_FLAGS_REPORT_RULES_MATCHING,
+            scan_callback, &file_data, 0);
 
-    int scan_status = yr_rules_scan_file(
-        rules, argv[1], SCAN_FLAGS_FAST_MODE | SCAN_FLAGS_REPORT_RULES_MATCHING,
-        scan_callback, &user_file, 0);
-
-    switch (scan_status) {
-    case ERROR_SUCCESS:
-        break;
-    case ERROR_INSUFFICIENT_MEMORY:
-        fprintf(stderr, "Insufficient memory for scan\n");
-        break;
-    case ERROR_COULD_NOT_OPEN_FILE:
-        fprintf(stderr, "Could not open file: %s\n", argv[1]);
-        break;
-    default:
-        fprintf(stderr, "General Error\n");
+        switch (scan_status) {
+        case ERROR_SUCCESS:
+            break;
+        case ERROR_COULD_NOT_OPEN_FILE:
+            fprintf(stderr, "Could not open file: %s\n", file_data.filename);
+            break;
+        default:
+            fprintf(stderr, "General Error\n");
+        }
+    } else {
+        printf("Not yet implimented\n");
     }
 
     yr_rules_destroy(rules);
