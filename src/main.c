@@ -87,8 +87,6 @@ int main(int argc, char **argv) {
             fprintf(stderr, "General Error\n");
         }
     } else {
-        printf("%s\n", file_data.filename);
-        getchar();
         int fanotify_fd = fanotify_init(FAN_CLOEXEC | FAN_NONBLOCK | FAN_CLASS_CONTENT, O_RDONLY | O_LARGEFILE);
         if (fanotify_fd == -1) {
             perror("fanotify_init");
@@ -139,11 +137,7 @@ int main(int argc, char **argv) {
                         printf("File write detected on FD=%d\n", metadata->fd);
                         get_filename_from_fd(metadata->fd);
                         close(metadata->fd);
-                    } else if (metadata->mask & FAN_ACCESS) {
-                        printf("File access detected on FD=%d\n", metadata->fd);
-                        get_filename_from_fd(metadata->fd);
-                        close(metadata->fd);
-                    }
+                    } 
                 }
             }
         }
