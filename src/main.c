@@ -1,14 +1,33 @@
 // Aaron Sprouse 2024
 
+#include <linux/limits.h>
+#define MODE_SINGLEFILE 0
+#define MODE_DIR 1
+
+#define _GNU_SOURCE
+
 #include "compiler.h"
 #include "scanner.h"
 
 #include <errno.h>
 #include <limits.h>
 #include <stdlib.h>
+#include <poll.h>
+#include <fcntl.h>
+#include <sys/fanotify.h>
 
-#define MODE_SINGLEFILE 0
-#define MODE_DIR 1
+static void get_filename_from_fd(int fd) {
+    char path[PATH_MAX];
+    char resolved_path[PATH_MAX];
+
+    snprintf(path, sizeof(path), "/proc/self/fd/%d", fd);
+    int path_len = readlink(path, resolved_path, sizeof(resolved_path) - 1);
+    if (-1 == path_len) {
+        perror("readlink");
+    } 
+    resolved_path[path_len] = '\0';  // Ensure null-terminated string
+    printf("File: %s\n", resolved_path);
+}
 
 int main(int argc, char **argv) {
 
@@ -68,7 +87,68 @@ int main(int argc, char **argv) {
             fprintf(stderr, "General Error\n");
         }
     } else {
-        printf("Not yet implimented\n");
+        printf("%s\n", file_data.filename);
+        getchar();
+        int fanotify_fd = fanotify_init(FAN_CLOEXEC | FAN_NONBLOCK | FAN_CLASS_CONTENT, O_RDONLY | O_LARGEFILE);
+        if (fanotify_fd == -1) {
+            perror("fanotify_init");
+            exit(EXIT_FAILURE);
+        }
+                                                                                // Just interested in FAN_CLOSE_WRITE at the moment for demonstration purposes
+        if (fanotify_mark(fanotify_fd, FAN_MARK_ADD | FAN_MARK_MOUNT, FAN_CLOSE_WRITE, AT_FDCWD, file_data.filename) == -1) {
+            perror("fanotify_mark");
+            close(fanotify_fd);
+            exit(EXIT_FAILURE);
+        }
+
+        // Set up polling
+        struct pollfd fds[1];
+        fds[0].fd = fanotify_fd;
+        fds[0].events = POLLIN;
+
+        printf("Monitoring file access and writes on the root filesystem and its subdirectories...\n");
+
+        while (1) {
+            int poll_num = poll(fds, 1, -1);
+            if (poll_num == -1) {
+                if (errno == EINTR) continue;
+                perror("poll");
+                close(fanotify_fd);
+                exit(EXIT_FAILURE);
+            }
+
+            if (fds[0].revents & POLLIN) {
+                char buffer[4096];
+                ssize_t len = read(fanotify_fd, buffer, sizeof(buffer));
+                if (len == -1 && errno != EAGAIN) {
+                    perror("read");
+                    close(fanotify_fd);
+                    exit(EXIT_FAILURE);
+                }
+
+                struct fanotify_event_metadata *metadata;
+                for (metadata = (struct fanotify_event_metadata *)buffer;
+                    FAN_EVENT_OK(metadata, len);
+                    metadata = FAN_EVENT_NEXT(metadata, len)) {
+                    if (metadata->mask & FAN_Q_OVERFLOW) {
+                        printf("Queue overflow!\n");
+                        continue;
+                    }
+
+                    if (metadata->mask & FAN_CLOSE_WRITE) {
+                        printf("File write detected on FD=%d\n", metadata->fd);
+                        get_filename_from_fd(metadata->fd);
+                        close(metadata->fd);
+                    } else if (metadata->mask & FAN_ACCESS) {
+                        printf("File access detected on FD=%d\n", metadata->fd);
+                        get_filename_from_fd(metadata->fd);
+                        close(metadata->fd);
+                    }
+                }
+            }
+        }
+
+        close(fanotify_fd);
     }
 
     yr_rules_destroy(rules);

@@ -2,8 +2,8 @@
 
 # Config
 compiler = gcc
-debug_compile_flags = -Wall -Wextra -Wfatal-errors -Werror -O0 -g
-debug_link_flags = -lyara
+debug_compile_flags = -Wall -Werror -O0 -g -fsanitize=address
+debug_link_flags = -lyara -fsanitize=address
 release_compile_flags = -Wall -Wextra -Wfatal-errors -Werror -O2
 release_link_flags = -lyara
 debug = true
